@@ -1,5 +1,6 @@
 import os
 from glob import glob
+import torch
 
 from trainer import Trainer, TrainerArgs
 
@@ -33,37 +34,49 @@ audio_config = VitsAudioConfig(
 vitsArgs = VitsArgs(
     use_language_embedding=False,
     embedded_language_dim=4,
+
     use_speaker_embedding=True,
     d_vector_dim=512,
-    use_sdp=False,
 )
 
 config = VitsConfig(
-    model_args=vitsArgs,
-    audio=audio_config,
     run_name="vits_vctk",
+
+    # Model Architecture
+    model_args=vitsArgs,
     use_speaker_embedding=True,
-    batch_size=4,
-    eval_batch_size=2,
-    batch_group_size=0,
-    num_loader_workers=2,
-    num_eval_loader_workers=1,
-    run_eval=True,
-    test_delay_epochs=-1,
-    epochs=1000,
-    text_cleaner="multilingual_cleaners",
-    use_phonemes=True,
-    phoneme_language="zh-cn",
-    phoneme_cache_path=os.path.join(output_path, "phoneme_cache"),
-    compute_input_seq_cache=True,
-    print_step=25,
-    use_language_weighted_sampler=False,
-    print_eval=False,
-    mixed_precision=False,
+
+    # Dataset
+    datasets=dataset_config,
+
+    # Audio
+    audio=audio_config,
     min_audio_len=32 * 256 * 4,
     max_audio_len=160000,
+
+    # Trainer
+    # Use default batch size and dataloader worker
     output_path=output_path,
-    datasets=dataset_config,
+
+    epochs=100,
+    print_step=100,
+
+    run_eval=True,
+    print_eval=True,
+    run_eval_steps=600,
+
+    save_step=600,
+    save_n_checkpoints=3,
+    save_best_after=600,
+
+    test_sentences=[['我最爱我的宝了']],
+
+    # Tokenizer
+    text_cleaner="multilingual_cleaners",
+    use_phonemes=True,
+    compute_input_seq_cache=True,
+    phoneme_cache_path=os.path.join(output_path, "phoneme_cache"),
+    phoneme_language="zh-cn",
     characters=CharactersConfig(
         characters_class="TTS.tts.models.vits.VitsCharacters",
         pad="<PAD>",
@@ -84,7 +97,6 @@ ap = AudioProcessor(**config.audio.to_dict())
 
 
 # load training samples
-
 def formatter(root_path, meta_file=None, ignored_speakers=None):
     filename_text_dict = {}
     with open(os.path.join(root_path, meta_file), 'r', encoding='UTF-8') as f:
@@ -115,12 +127,9 @@ train_samples, eval_samples = load_tts_samples(
 # it maps speaker-id to speaker-name in the model and data-loader
 CONFIG_SE_PATH = "config_se.json"
 CHECKPOINT_SE_PATH = "SE_checkpoint.pth.tar"
-import torch
 USE_CUDA = torch.cuda.is_available()
 speaker_manager = SpeakerManager(encoder_model_path=CHECKPOINT_SE_PATH, encoder_config_path=CONFIG_SE_PATH,
                                  use_cuda=USE_CUDA)
-# speaker_manager.set_ids_from_data(train_samples + eval_samples, parse_key="speaker_name")
-# config.model_args.num_speakers = speaker_manager.num_speakers
 
 language_manager = LanguageManager(config=config)
 config.model_args.num_languages = language_manager.num_languages
@@ -139,6 +148,3 @@ trainer = Trainer(
 )
 if __name__ == '__main__':
     trainer.fit()
-
-
-from TTS.tts.utils.synthesis import synthesis
