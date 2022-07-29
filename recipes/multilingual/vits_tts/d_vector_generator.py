@@ -75,7 +75,7 @@ encoder_manager = SpeakerManager(
 class_name_key = 'speaker_name'
 
 # compute speaker embeddings
-speaker_maping = {}
+speaker_mapping = {}
 for idx, wav_file in enumerate(tqdm(wav_files)):
     if isinstance(wav_file, dict):
         class_name = wav_file[class_name_key]
