@@ -18,6 +18,7 @@ from TTS.tts.utils.text.characters import _phonemes
 output_path = os.path.dirname(os.path.abspath(__file__))
 
 dataset_path = r"C:\Users\PiaoYang\Desktop\aidatatang_200zh"
+folder_filter = '**'
 dataset_config = [
     BaseDatasetConfig(meta_file_train='aidatatang_200_zh_transcript.csv', path=dataset_path)
 ]
@@ -31,20 +32,24 @@ audio_config = VitsAudioConfig(
     mel_fmax=None,
 )
 
+d_vector_path = r'speakers_sub.pth'
 vitsArgs = VitsArgs(
     use_language_embedding=False,
     embedded_language_dim=4,
 
-    use_speaker_embedding=True,
+    use_speaker_embedding=False,
+    # speaker_embedding_channels=512,
+
+    use_d_vector_file=True,
+    d_vector_file=d_vector_path,
     d_vector_dim=512,
 )
 
 config = VitsConfig(
-    run_name="vits_vctk",
+    run_name="vits_200zh",
 
     # Model Architecture
     model_args=vitsArgs,
-    use_speaker_embedding=True,
 
     # Dataset
     datasets=dataset_config,
@@ -58,18 +63,29 @@ config = VitsConfig(
     # Use default batch size and dataloader worker
     output_path=output_path,
 
-    epochs=100,
+    batch_size=32,
+    eval_batch_size=16,
+    precompute_num_workers=8,
+    num_loader_workers=8,
+    num_eval_loader_workers=4,
+
+    scheduler_after_epoch=True,
+    dur_loss_alpha=2,
+    feat_loss_alpha=2,
+    kl_loss_alpha=2,
+
+    epochs=1000,
     print_step=100,
 
     run_eval=True,
     print_eval=True,
-    run_eval_steps=600,
+    run_eval_steps=500,
 
-    save_step=600,
+    save_step=200,
     save_n_checkpoints=3,
-    save_best_after=600,
+    save_best_after=0,
 
-    test_sentences=[['我最爱我的宝了']],
+    test_sentences=[['我最爱我的宝了', 'G0991'], ['大猪头就是大猪头', 'G0991']],
 
     # Tokenizer
     text_cleaner="multilingual_cleaners",
@@ -106,7 +122,7 @@ def formatter(root_path, meta_file=None, ignored_speakers=None):
             filename_text_dict[filename] = text
 
     items = []
-    for wav_file_path in glob(f"{os.path.join(root_path, 'corpus/train')}/**/*.wav", recursive=True):
+    for wav_file_path in glob(f"{os.path.join(root_path, 'corpus/train')}/{folder_filter}/*.wav", recursive=True):
         wav_filename = os.path.basename(wav_file_path).split('.wav')[0]
         items.append({'audio_file': wav_file_path,
                       'text': filename_text_dict[wav_filename],
@@ -129,6 +145,7 @@ CONFIG_SE_PATH = "config_se.json"
 CHECKPOINT_SE_PATH = "SE_checkpoint.pth.tar"
 USE_CUDA = torch.cuda.is_available()
 speaker_manager = SpeakerManager(encoder_model_path=CHECKPOINT_SE_PATH, encoder_config_path=CONFIG_SE_PATH,
+                                 d_vectors_file_path=d_vector_path,
                                  use_cuda=USE_CUDA)
 
 language_manager = LanguageManager(config=config)

@@ -25,7 +25,8 @@ use_cuda = torch.cuda.is_available()
 
 CONFIG_SE_PATH = "config_se.json"
 CHECKPOINT_SE_PATH = "SE_checkpoint.pth.tar"
-output_path = ''
+output_path = 'speakers.pth'
+folder_filter = '**'
 
 dataset_path = r"C:\Users\PiaoYang\Desktop\aidatatang_200zh"
 dataset_config = [
@@ -43,7 +44,7 @@ def formatter(root_path, meta_file=None, ignored_speakers=None):
             filename_text_dict[filename] = text
 
     items = []
-    for wav_file_path in glob(f"{os.path.join(root_path, 'corpus/train')}/**/*.wav", recursive=True):
+    for wav_file_path in glob(f"{os.path.join(root_path, 'corpus/train')}/{folder_filter}/*.wav", recursive=True):
         wav_filename = os.path.basename(wav_file_path).split('.wav')[0]
         items.append({'audio_file': wav_file_path,
                       'text': filename_text_dict[wav_filename],
@@ -95,13 +96,13 @@ for idx, wav_file in enumerate(tqdm(wav_files)):
 
 if speaker_mapping:
     # save speaker_mapping if target dataset is defined
-    if os.path.isdir(output_path):
-        mapping_file_path = os.path.join(output_path, "speakers.pth")
-    else:
-        mapping_file_path = output_path
+    # if os.path.isdir(output_path):
+    #     mapping_file_path = os.path.join(output_path, "speakers.pth")
+    # else:
+    #     mapping_file_path = output_path
+    #
+    # if os.path.dirname(mapping_file_path) != "":
+    #     os.makedirs(os.path.dirname(mapping_file_path), exist_ok=True)
 
-    if os.path.dirname(mapping_file_path) != "":
-        os.makedirs(os.path.dirname(mapping_file_path), exist_ok=True)
-
-    save_file(speaker_mapping, mapping_file_path)
-    print("Speaker embeddings saved at:", mapping_file_path)
+    save_file(speaker_mapping, output_path)
+    print("Speaker embeddings saved at:", output_path)
